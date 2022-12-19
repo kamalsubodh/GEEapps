@@ -1,0 +1,635 @@
+//Codes to prepare HRU input data for J2000 model- Nepal Snow Cover
+//Can be used to clip and download raster data , or select the desired district or extent
+//Prepared by Subodh Kumar Mamal, IWMI Nepal
+//Add a credit for use in your project. 
+// Center the map over the coordinate
+//Use for google drive extract when the image size of raster exceeds 32 MB
+ui.root.clear();
+var map = ui.Map().setCenter(84.1034, 27.9471,7);
+var featurecoll;
+Map.setCenter(84.1034, 27.9471, 2);
+ var titlehead = new ui.Label({
+   value : "Input Data for WebHRU",
+   style : {fontWeight:'bold',fontSize:'16px'}
+ }
+   );
+   
+ var Regionname = new ui.Label("Region Name")
+ var regionnametb = new ui.Textbox();
+ var maphead = new ui.Label("Map Data");
+ 
+  var nepal = ee.FeatureCollection('users/asupatience/NepalBoundary')
+    var district = ee.FeatureCollection('users/asupatience/Nepal_District_New')
+    print (district)
+    
+   var pointcol = ee.FeatureCollection("DrainPoint");
+   var station = ee.FeatureCollection('users/asupatience/HydrometNepal');
+   var projbound =ee.FeatureCollection("ProjectBoundary")
+     var  nepalcheck = ui.Checkbox("Show/Hide Country Boundary",true,shownepalboundary)
+  var  distcheck = ui.Checkbox("Show/Hide District Boundary",true,showdistboundary)
+   var  stncheck = ui.Checkbox("Show/Hide Stations",true,showstation)
+    var  snpatodist = ui.Checkbox("Snap District",false,snapdistrict)
+    
+   var drpt = new ui.Label("Step-1 : Select Drain Point by clicking button below");
+   var drbut = new ui.Button("Click Here",getDrainPoint)
+  //  var downbut = new ui.Button("Download",getDataexp)
+   var long = new ui.Label("Longitude");
+   var longtb = new ui.Textbox();
+    var sellb = new ui.Label("Select to show layers");
+    
+  
+     var adddist =function(g,d)
+{
+  var ge = ee.Feature(g).get('DIST_EN');
+ 
+   return ee.List(d).add(ge)
+}
+var distlist=ee.List([])
+distlist = district.iterate(adddist,distlist.getInfo())
+
+     distlist = (distlist.getInfo())
+
+   var sel = new ui.Select(
+     {items :["DEM","Soil Cover","Land Cover"],
+     onChange :onchangesel
+       
+     }
+   )
+    var distsel = new ui.Select(
+     {items :distlist,
+     onChange :snapdistrict
+       
+     }
+   )
+   var lat = new ui.Label("Latitude");
+   var lattb = new ui.Textbox();
+    var extlbl = new ui.Label("Click on set extent button to select extent");
+  var setext = new ui.Button("Step-2 : Set Extent",setExtent)
+     var seldi = new ui.Label("Select the district")
+   
+   var setres = new ui.Label("Step-3 : Set Resolution");
+   var tb_resolu = new ui.Textbox();
+  var exportt = new ui.Button("Step-4 : Click on Export",ExportData)
+    var exporttdrive = new ui.Button("Step-4 : Export to Google Drive",ExportDataToDrivemanual)
+    var snapdis = false
+    var laysel
+   
+     function snapdistrict(val)
+{
+  var selfe=null;
+   function getSelecctdDis(g)
+  {
+    var v =ee.String(val).getInfo()
+    print(v)
+    for(var i=0;i<75;i++)
+    {
+      var fea = ee.Feature(district.filter(ee.Filter.eq('DIST_EN',v)).first())
+    
+     selfe=fea
+    }
+    
+      return selfe
+  }
+  
+  var sl = district.map(getSelecctdDis)
+  
+ 
+  var fecol = ee.FeatureCollection(sl)
+   featurecoll =fecol// sl.geometry().getInfo();
+ 
+  var sty = {color: 'black', fillColor:'yellow'}
+  var stylingst = {}
+  
+  
+  if(laysel==null)
+  {
+    
+    laysel = map.addLayer(fecol.style(sty))
+  }
+  else
+  {
+    
+   laysel= map.remove(laysel);
+    laysel = map.addLayer(fecol.style(sty))
+  }
+
+}
+function Hightdis()
+{
+  
+}
+//Map.Onclick(Hightdis)
+
+
+function shownepalboundary(boolval)
+{
+ 
+  if(boolval === true)
+  {
+    
+   neplay.setShown(true)
+  }
+  else
+  {
+   neplay.setShown(false)
+  }
+}
+  function showstation(boolval)
+{
+ 
+  if(boolval === true)
+  {
+    
+   sta.setShown(true)
+  }
+  else
+  {
+   neplay.setShown(false)
+  }
+}
+  function showdistboundary(boolval)
+{
+ 
+  if(boolval === true)
+  {
+    
+     lay.setShown(true)
+   
+  }
+  else
+  {
+    lay.setShown(false)
+}
+}
+
+function onchangesel()
+{
+   elevationlay.setShown(false)
+   soillay.setShown(false)
+   landcoverlay.setShown(false)
+  var v = sel.getValue()
+  
+    if(v === "DEM")
+  {
+    print(v)
+     elevationlay.setShown(true)
+   
+  }
+  
+  if(v === "Soil Cover")
+  {
+    print(v)
+     soillay.setShown(true)
+   
+  }
+ 
+ if(v === "Land Cover")
+  {
+    print(v)
+     landcoverlay.setShown(true)
+   
+  }
+  
+}
+
+
+var pointdra = new ui.Map.DrawingTools();
+map.add(pointdra)
+var mode= "Point"
+function getDrainPoint()
+{
+  mode = "Point"
+  pointdra.setShape("point")
+  
+  pointdra.draw()
+  
+}
+var pointgeom = ee.Geometry.Point(0,0)
+
+
+var getAOI = function(){
+  
+  if(mode=="Point")
+  {
+ var g= pointdra.layers().get(0).toGeometry();
+ var coords = (g.coordinates())
+ longtb.setValue(coords.get(0).getInfo())
+ lattb.setValue(coords.get(1).getInfo())
+ 
+ pointgeom =ee.Geometry.Point([coords.get(0).getInfo(),coords.get(1).getInfo()]);
+  }
+  if(mode == "polygon")
+  {
+    print( pointdra.layers().get(0).toGeometry().geometries())
+  featurecoll = pointdra.layers().get(0).toGeometry().geometries().get(1).getInfo();
+ 
+  }
+  
+ 
+ return g;
+};
+
+var AOI =pointdra.onDraw(getAOI);
+
+function setExtent()
+{
+  mode = "rectange"
+  pointdra.setShape("rectangle")
+   
+  pointdra.draw()
+  
+}
+
+
+  var pan =  new ui.Panel(
+  {
+  widgets : [titlehead,Regionname,regionnametb,nepalcheck,distcheck,stncheck,sellb,sel,drpt,drbut,long,longtb,lat,lattb,extlbl,setext,setres,tb_resolu,exportt,exporttdrive],
+  layout : ui.Panel.Layout.flow('vertical'),
+  style : {width:'200px', maxWidth:'300px' }
+  });
+
+  var stylingnepal = {color: 'red', fillColor: '00000000'};
+var stylingnepalhid = {color: 'red', fillColor: '00000000'};
+ var neplay = map.addLayer(nepal.style(stylingnepal),null,'Nepal-Boundary');
+
+ var stylingdist = {color: 'black', fillColor: '00000000'}
+  var stylingdisthid = {color: 'black', fillColor: '00000000'}
+  var stylingst = {}
+   var lay = map.addLayer(district.style(stylingdist),null,'District-Boundary')
+   
+ 
+
+
+
+//var river = ee.FeatureCollection('users/asupatience/River')
+
+
+ var pandown =  new ui.Panel(
+  {
+    widgets:[new ui.Label("Step-4 : Download Links")],
+    layout : ui.Panel.Layout.flow('horizontal'),
+    style :{height:'100px'}
+  });
+  
+ var pan1 =  new ui.Panel(
+  {
+  widgets : [maphead,seldi,distsel,map,pandown],
+  layout : ui.Panel.Layout.flow('vertical')
+  });
+  
+  
+ var sppanelaction = new ui.SplitPanel(
+     {
+  firstPanel : pan,
+  secondPanel :pan1,
+  orientation : 'horizontal'
+  
+  });
+  
+
+  
+  ui.root.add(sppanelaction);
+    
+ //var sppanelsppanelactionmap = new ui.SplitPanel();
+
+
+var drainpoint = ee.Geometry.Point(0,0);
+//Get export geometry
+
+
+
+// Input Shape File for the region under study. Currently Nepal Boundary Considered
+
+
+
+//Map.addLayer(river)
+// Load Nepal Shapefile
+var NepalWGS  = ee.Image('users/santosh3nepal/NepalWGS')
+//Get DEM form the CGIAR Open repository and clip  to the geometry
+var elevation = ee.Image('CGIAR/SRTM90_V4')
+var elevationlay = map.addLayer(elevation,null,"DEM")
+//var landcover = ee.Image('ESA/GLOBCOVER_L4_200901_200912_V2_3')
+//var landcover = ee.Image('users/asupatience/Landuseall1')
+
+
+//Create a slope based on DEM
+var slope     = ee.Terrain.slope(elevation);
+//Get FAO Harmonised World Soil Database Soil Map
+var soil      = ee.Image('users/asupatience/FAOSoilMap')
+var soillay = map.addLayer(soil,null,"Soil-Cover")
+//Load Indus Glacier From Personal Repository
+var glaciers_Indus = ee.Image('users/santosh3nepal/Glaciers_Indus')
+//Load Ganges Glacier From Personal Repository
+var glaciers_Ganges = ee.Image('users/santosh3nepal/Glaciers_Ganges')
+
+//Load Composite Ganges and Indus Glacier From Personal Repository
+var landcover = ee.Image('users/asupatience/Nepal_Snow_Cover/LCwithGanges');
+var vizParams = {
+  min: 11,
+  max: 20,
+ opacity:0.75,
+  palette:['#ee4035', '#f37736', '#fdf498', '#7bc043', '#0392cf', '#e6770b', '#d3290f', '#52d053', '#765898', '#000000']
+  
+};
+
+
+var landcoverlay = map.addLayer(landcover,vizParams,"Land-Cover")
+
+// Load an existing color palettes
+var palettes = require('users/gena/packages:palettes');
+var palette = palettes.kovesi.diverging_bwr_55_98_c37[7];
+print(station)
+ 
+var stnvisparm = ee.Dictionary({
+  PRECIPITATION: {color: 'blue', pointSize: 6, pointShape: 'circle'},
+  AERONATICAL: {color: 'yellow', pointSize: 6, pointShape: 'square'},
+  AGROMETEOROLOGY: {color: 'green', pointSize: 6, pointShape: 'diamond'},
+  CLIMATOLOGY: {color: 'red', pointSize: 6, pointShape: 'cross'},
+  SYNOPTIC: {color: 'brown', pointSize: 6, pointShape: 'star5'},
+   AWS: {color: 'orange', pointSize: 6, pointShape: 'star5'},
+  
+});
+
+// Add feature-specific style properties to each feature based on fuel type.
+var fc = station.map(function(feature) {
+  return feature.set('style', stnvisparm.get(feature.get('StationTyp')));
+});
+
+// Style the FeatureCollection according to each feature's "style" property.
+var fcVisCustom = fc.style({
+  styleProperty: 'style',
+  neighborhood: 8  // maximum "pointSize" + "width" among features
+});
+  var stationlay = map.addLayer(fcVisCustom,null,"Met/Hydrological Station")
+elevationlay.setShown(false)
+   soillay.setShown(false)
+   landcoverlay.setShown(false)
+   stationlay.setShown(true)
+   
+
+// Export the image, specifying the CRS, transform, and region.
+function ExportData()
+{
+  
+// Set Region Name
+var reg = regionnametb.getValue();
+  var coords = pointgeom.coordinates();
+   var dp = ee.Geometry.Point([coords.get(0).getInfo(), coords.get(1).getInfo()]).transform("EPSG:32645",0.1)
+  print("The selected drain point is - ",dp)
+
+  var transcoll =function(geom)
+{
+  var ge = ee.Feature(geom);
+  var geomtrans = ee.Feature(ge);
+  return geomtrans;
+}
+
+
+ //print("The selected drain point is - ",geometry)
+  //int(geometry)
+var demtext = ee.String('DEM_').cat(reg).getInfo();
+//Export.image.toDrive({
+ // image: elevation,  
+ // region: featurecoll,
+ // description: demtext,
+ // folder: reg,
+ // scale: 500,
+ //   crs: 'EPSG:32645',
+ // maxPixels:1e10,
+//});
+var pol = featurecoll.first()
+var mask = ee.Image.constant(0).clip(pol).mask(1).not()
+
+var el = elevation.clip(pol).mask(mask)
+ //.clip(pol)
+var demdownloadId = ee.data.getDownloadId({
+    image: el,
+    name: demtext,
+    scale: (tb_resolu.getValue()),
+    
+  
+});
+var demurl = new ui.Label("DEM ");
+pandown.add(demurl);
+demurl.setUrl(ee.data.makeDownloadUrl(demdownloadId));
+
+// Export the image, specifying the CRS, transform, and region.
+var globtext = ee.String('GlobeCover_').cat(reg).getInfo();
+//Export.image.toDrive({
+  //image: landcover,  
+ // region: featurecoll,
+//  band : 'band 1',
+ // description: globtext,
+  //folder: reg,
+ // scale: 500,
+  //bands: 2,
+ // crs: 'EPSG:32645',
+//  maxPixels:1e10,
+//});
+var lc = landcover.clip(pol).mask(mask)
+var globcoverloadId = ee.data.getDownloadId({
+    image: lc,
+    name: globtext,
+    scale: (tb_resolu.getValue()),
+   // crs: 'EPSG:32645',
+   
+    //maxPixels:1e10,
+    // region: featurecoll,
+});
+var landurl = new ui.Label("LandCover ");
+pandown.add(landurl);
+landurl.setUrl(ee.data.makeDownloadUrl(globcoverloadId));
+
+// Export the image, specifying the CRS, transform, and region.
+var soiltext = ee.String('SoilCover_').cat(reg).getInfo();
+//Export.image.toDrive({
+  //image: soil,  
+//  region: featurecoll,
+ // description: soiltext,
+ // folder: reg,
+ // scale: 500,
+ // crs: 'EPSG:32645',
+//  maxPixels:1e10,
+//});
+var sc = soil.clip(pol).mask(mask)
+var soilcoverloadId = ee.data.getDownloadId({
+    image: sc,
+    name: soiltext,
+    scale: (tb_resolu.getValue()),
+    crs: 'EPSG:32645',
+    //maxPixels:1e10,
+     //region: featurecoll,
+});
+var soilurl = new ui.Label("Soil Cover ");
+pandown.add(soilurl);
+soilurl.setUrl(ee.data.makeDownloadUrl(soilcoverloadId));
+
+var trans = function(geom)
+{
+  var ge = ee.Feature(geom);
+  var geomtrans = ee.Feature(ge).transform("EPSG:32645",0.1);
+  return geomtrans;
+}
+
+
+var gee=  ee.Feature(featurecoll);
+print("From Export",gee)
+var featut = ee.FeatureCollection(ee.List([gee])).map(trans);
+
+print(featut)
+
+//Export.table.toDrive({
+ // collection: featut,
+ // description: ee.String('ProjBound_').cat(reg).getInfo(),
+ // folder: ee.String(reg).getInfo(),
+ // fileFormat: 'SHP'
+//});
+
+var prjbounddown = ee.data.getTableDownloadId({
+    table: featut,
+    filename: ee.String('ProjBound_').cat(reg).getInfo(),
+    format: 'SHP',
+   
+});
+var pblb = new ui.Label("Project Boundary");
+pandown.add(pblb);
+pblb.setUrl(ee.data.makeTableDownloadUrl(prjbounddown));
+
+var drainpt = ee.FeatureCollection(ee.List([ee.Feature(dp,{'id':0})]));
+print(drainpt)
+//Export.table.toDrive({
+  //collection: drainpt,
+  //description: ee.String("DrainPoint_").cat(reg).getInfo(),
+  //folder: ee.String(reg).getInfo(),
+  //fileFormat: 'SHP'
+//});
+
+var drainpointdown = ee.data.getTableDownloadId({
+    table: drainpt,
+    filename: "Gauges",
+    format: 'SHP',
+   
+});
+var drptlb = new ui.Label("Gauges");
+pandown.add(drptlb);
+drptlb.setUrl(ee.data.makeTableDownloadUrl(drainpointdown));
+
+var d =ee.data.listOperations(10)
+print(d)
+}
+
+function ExportDataToDrivemanual()
+{
+  
+// Set Region Name
+var reg = regionnametb.getValue();
+  var coords = pointgeom.coordinates();
+   //var drainpoint = ee.Geometry.Point([coords.lon, coords.lat]).transform("EPSG:32645",0.1);
+   var dp = ee.Geometry.Point([ee.Number(coords.get(0).getInfo()), ee.Number(coords.get(1).getInfo())]).transform("EPSG:32645",0.1)
+    dp.coordinates()
+  print("The selected drain point is - ",dp)
+
+  var transcoll =function(geom)
+{
+  var ge = ee.Feature(geom);
+  var geomtrans = ee.Feature(ge);
+  return geomtrans;
+}
+
+
+ //print("The selected drain point is - ",geometry)
+  //int(geometry)
+var demtext = ee.String('DEM_').cat(reg).getInfo();
+Export.image.toDrive({
+  image: elevation,  
+  region: featurecoll,
+  description: demtext,
+  folder: reg,
+  scale: (tb_resolu.getValue()),
+    crs: 'EPSG:32645',
+  maxPixels:1e10,
+});
+
+
+// Export the image, specifying the CRS, transform, and region.
+var globtext = ee.String('GlobeCover_').cat(reg).getInfo();
+Export.image.toDrive({
+  image: landcover,  
+  region: featurecoll,
+ 
+  description: globtext,
+  folder: reg,
+  scale: (tb_resolu.getValue()),
+
+  crs: 'EPSG:32645',
+ maxPixels:1e10,
+});
+
+
+// Export the image, specifying the CRS, transform, and region.
+var soiltext = ee.String('SoilCover_').cat(reg).getInfo();
+Export.image.toDrive({
+  image: soil,  
+  region: featurecoll,
+  description: soiltext,
+  folder: reg,
+  scale: (tb_resolu.getValue()),
+  crs: 'EPSG:32645',
+  maxPixels:1e10,
+});
+
+
+var trans = function(geom)
+{
+  var ge = ee.Feature(geom);
+  var geomtrans = ee.Feature(ge).transform("EPSG:32645",0.1);
+  return geomtrans;
+}
+
+
+var gee=  ee.Feature(featurecoll);
+print("From Export",gee)
+var featut = ee.FeatureCollection(ee.List([gee])).map(trans);
+
+print(featut)
+
+//Export.table.toDrive({
+ // collection: featut,
+ // description: ee.String('ProjBound_').cat(reg).getInfo(),
+ // folder: ee.String(reg).getInfo(),
+ // fileFormat: 'SHP'
+//});
+
+var prjbounddown = ee.data.getTableDownloadId({
+    table: featut,
+    filename: ee.String('ProjBound_').cat(reg).getInfo(),
+    format: 'SHP',
+   
+});
+var pblb = new ui.Label("Project Boundary");
+pandown.add(pblb);
+pblb.setUrl(ee.data.makeTableDownloadUrl(prjbounddown));
+
+var drainpt = ee.FeatureCollection(ee.List([ee.Feature(dp,{'id':0,'proj':'EPSG:32645'})]));
+// drainpt = ee.FeatureCollection(ee.List([drainpt])).map(trans);
+print(drainpt)
+Export.table.toDrive({
+  collection: drainpt,
+  description: ee.String("Gauges").cat(reg).getInfo(),
+  folder: ee.String(reg).getInfo(),
+  fileFormat: 'SHP'
+});
+
+var drainpointdown = ee.data.getTableDownloadId({
+    table: drainpt,
+    filename: "Gauges",
+    format: 'SHP',
+   
+});
+var drptlb = new ui.Label("Gauges");
+pandown.add(drptlb);
+drptlb.setUrl(ee.data.makeTableDownloadUrl(drainpointdown));
+
+var d =ee.data.listOperations(10)
+print(d)
+}
